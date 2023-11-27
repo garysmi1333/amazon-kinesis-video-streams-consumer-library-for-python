@@ -59,7 +59,7 @@ The example code starts up a simple http server running on port 8000. The server
 from the lambda function created when setting up AWS Connect Live Media Streaming
 
 7. The example simply saves the incoming audio to files, to test, make a call to AWS Connect for a short time. 
-Two files should be created, to_customer.wav an from_customer.wav either or both will contain audio depending on houw you setup
+Two files should be created, audio_to_customer.wav an audio_from_customer.wav either or both will contain audio depending on houw you setup
 AWS Connect Live Media Streaming. Due to file buffering ensure that the call stream has ended to ensure that all audio is saved to disk.
 
 ## Timing and Async Considerations

@@ -91,8 +91,11 @@ def on_stream_read_exception(stream_name, error):
 
 async def incoming_stream_add(request):
     try:
+        # Wait for the Incoming Contact Call 
+        print('waiting for incoming call info from AWS Lambda')
         aws_incoming_event = await request.json()
 
+        print(aws_incoming_event)
         media_streams = aws_incoming_event['Details']['ContactData']['MediaStreams']['Customer']['Audio']
         stream_arn = media_streams['StreamARN']
         
@@ -101,6 +104,7 @@ async def incoming_stream_add(request):
                 APIName='GET_MEDIA'
             )
         
+        print(data_endpoint)
         kvs_media_client =  boto3.client('kinesis-video-media', 
                                             aws_access_key_id=aws_access_key_id, 
                                             aws_secret_access_key=aws_secret_access_key, 

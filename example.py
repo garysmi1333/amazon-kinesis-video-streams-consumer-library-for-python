@@ -35,21 +35,26 @@ kvs_client = boto3.client('kinesisvideo',
                             region_name=region_name)
 
 
-def on_fragment_arrived(self, stream_name, fragment_bytes, fragment_dom, fragment_receive_duration):
-
+def on_fragment_arrived(stream_name, fragment_bytes, fragment_dom, fragment_receive_duration):
+    # Should only have to call this once per call
     track_info = kvs_fragment_processor.get_aws_connect_track_info(fragment_dom)
         
+    # Depending on how AWS Connect Live Media Streaming is configured the track numbers can be different
+    # So make sure we assign the correct ones
     if "AUDIO_FROM_CUSTOMER" in track_info:
-        from_customer_track_number = self.track_info["AUDIO_FROM_CUSTOMER"]['track_number']
+        from_customer_track_number = track_info["AUDIO_FROM_CUSTOMER"]['track_number']
         
-    if "AUDIO_TO_CUSTOMER" in self.track_info:
+    if "AUDIO_TO_CUSTOMER" in track_info:
         to_customer_track_number = track_info["AUDIO_TO_CUSTOMER"]['track_number']
     
-    audio_track_data = self.kvs_fragment_processor.get_aws_connect_customer_audio(fragment_dom)
+    # Get the actual audio bytes
+    audio_track_data = kvs_fragment_processor.get_aws_connect_customer_audio(fragment_dom)
 
+    # Convert the bytearrays to bytes
     track1_data = bytes(audio_track_data['track_1'])
     track2_data = bytes(audio_track_data['track_2'])
 
+    # And do something with the audio. In this example we are saving it to local file
     if to_customer_track_number == 1:
         if len(track1_data) > 0:
             to_customer_file.writeframes(track1_data)
@@ -61,7 +66,8 @@ def on_fragment_arrived(self, stream_name, fragment_bytes, fragment_dom, fragmen
         if len(track1_data) > 0:
             from_customer_file.writeframes(track1_data)
 
-def on_stream_read_complete(self, stream_name): 
+def on_stream_read_complete(stream_name): 
+    print('stream complete')
     try:
         to_customer_file.close()
     except Exception as e:
@@ -72,7 +78,8 @@ def on_stream_read_complete(self, stream_name):
     except Exception as e:
         print(e)
 
-def on_stream_read_exception(self, stream_name, error):
+def on_stream_read_exception(stream_name, error):
+    print(f'stream exception {error}')
     try:
         to_customer_file.close()
     except Exception as e:

@@ -16,7 +16,6 @@ __author__ = "Dean Colcott <https://www.linkedin.com/in/deancolcott/>"
 
 import io
 import logging
-import imageio.v3 as iio
 import amazon_kinesis_video_consumer_library.ebmlite.util as emblite_utils
 
 # Init the logger.
@@ -102,95 +101,131 @@ class KvsFragementProcessor():
         emblite_utils.pprint(fragment_dom, out=pretty_print_str)
         return pretty_print_str.getvalue()
 
-    def save_fragment_as_local_mkv(self, fragment_bytes, file_name_path):
+    def get_aws_connect_track_info(self, fragment_dom):
+            '''
+            Returns Audio Track Information
+
+            Whether AUDIO_FROM_CUSTOMER and/or AUDIO_TO_CUSTOMER is populated depends upon
+            whenever either was set when setting up Call Streaming in the AWS Connect Call Flow
+            {
+                "AUDIO_FROM_CUSTOMER": {
+                    "track_number": None,
+                    "track_identifying_byte": None,
+                    "track_uid": None,
+                    "track_type": None,
+                    "track_codec_id": None
+                },
+                "AUDIO_TO_CUSTOMER": {
+                    "track_number": None,
+                    "track_identifying_byte": None,
+                    "track_uid": None,
+                    "track_type": None,
+                    "track_codec_id": None
+                }
+            }
+
+            ### Parameters:
+
+                **fragment_dom**: ebmlite.core.Document <ebmlite.core.MatroskaDocument>
+                    The DOM like structure describing the fragment parsed by EBMLite. 
+
+            ### Return:
+                **track_information**: object
+                    Contains information about the tracks received
+            '''
+
+            segment_element = None
+            for element in fragment_dom:
+                if (element.id == 0x18538067):          # MKV Segment Element ID
+                    segment_element = element
+                    break
+            
+            if (not segment_element):
+                raise KeyError('Segment Element required but not found in fragment_doc' )
+
+            track_information = {
+            }
+
+            for element in segment_element:
+                if (element.id == 0x1654AE6B):                  # Tracks Master Element ID
+                    for trackentry in element:
+                        track_number = None
+                        track_uid = None
+                        track_type = None
+                        track_codec_id = None
+                        track_name = None
+                        for track_info in trackentry:
+                            if (track_info.id == 0xD7):         # Track Number Element ID
+                                track_number = track_info.value
+                            elif (track_info.id == 0x73C5):     # Track UID Element ID
+                                track_uid = track_info.value
+                            elif (track_info.id == 0x83):       #Track Type Element ID
+                                track_type = track_info.value   # Should always be 2 for Audio
+                            elif (track_info.id == 0x86):       # Track Codec Element ID
+                                track_codec_id = track_info.value
+                            elif (track_info.id == 0x536E):     # Track Name Element ID
+                                track_name = track_info.value   # Should contain either AUDIO_FROM_CUSTOMER or AUDIO_TO_CUSTOMER
+                            if (track_name and track_name not in track_information):
+                                track_information[track_name] = {}
+                                track_information[track_name]["track_number"] = track_number
+                                track_information[track_name]["track_uid"] = track_uid
+                                track_information[track_name]["track_type"] = track_type
+                                track_information[track_name]["track_codec_id"] = track_codec_id
+
+            return track_information
+        
+    def get_aws_connect_customer_audio(self, fragment_dom):
         '''
-        Save the provided fragment_bytes as stand-alone MKV file on local disk.
-        fragment_bytes as it arrives in is already a well formatted MKV fragment 
-        so can just write the bytes straight to disk and it will be a playable MKV file. 
+        Returns the actual audio bytes received for each track
+
+        One bytearray for each track present:
+
+        {
+            "track_1": bytearray(),
+            "track_2": bytearray()
+        }
+    
+        The bytes can be written directly to file, for example using python builtin wave library or futher
+        audio processing can be done
 
         ### Parameters:
 
-        fragment_bytes: bytearray
-            A ByteArray with raw bytes from exactly one fragment.
-
-        file_name_path: Str
-            Local file path / name to save the MKV file to. 
-
-        '''
-
-        f = open(file_name_path, "wb")
-        f.write(fragment_bytes)      
-        f.close()
-
-    def get_frames_as_ndarray(self, fragment_bytes, one_in_frames_ratio):
-        '''
-        Parses fragment_bytes and returns a ratio of available frames in the MKV fragment as
-        a list of numpy.ndarray's.
-
-        e.g: Setting one_in_frames_ratio = 5 will return every 5th frame found in the fragment.
-        (Starting with the first)
-
-        To return all available frames just set one_in_frames_ratio = 1
-
-        ### Parameters:
-
-        fragment_bytes: bytearray
-            A ByteArray with raw bytes from exactly one fragment.
-
-        one_in_frames_ratio: Str
-            Ratio of the available frames in the fragment to process and return.
+            **fragment_dom**: ebmlite.core.Document <ebmlite.core.MatroskaDocument>
+                The DOM like structure describing the fragment parsed by EBMLite. 
 
         ### Return:
-
-            frames: List<numpy.ndarray>
-            A list of frames extracted from the fragment as numpy.ndarray
-        
+            **track_audio_data**: dict
+                The audio data received
         '''
 
-        # Parse all frames in the fragment to frames list
-        frames = iio.imread(io.BytesIO(fragment_bytes), plugin="pyav", index=...)
-
-        # Store and return frames in frame ratio of total available 
-        ret_frames = []
-        for i in range(0, len(frames), one_in_frames_ratio):
-            ret_frames.append(frames[i])
-
-        return ret_frames
-
-    def save_frames_as_jpeg(self, fragment_bytes, one_in_frames_ratio, jpg_file_base_path):
-        '''
-        Parses fragment_bytes and saves a ratio of available frames in the MKV fragment as
-        JPEGs on the local disk.
-
-        e.g: Setting one_in_frames_ratio = 5 will return every 5th frame found in the fragment 
-        (starting with the first).
-       
-        To return all available frames just set one_in_frames_ratio = 1
-
-        ### Parameters:
-
-        fragment_bytes: ByteArray
-            A ByteArray with raw bytes from exactly one fragment.
-
-        one_in_frames_ratio: Str
-            Ratio of the available frames in the fragment to process and save.
-
-        ### Return
-        jpeg_paths : List<Str>
-            A list of file paths to the saved JPEN files. 
+        segment_element = None
+        for element in fragment_dom:
+            if (element.id == 0x18538067):          # MKV Segment Element ID
+                segment_element = element
+                break
         
-        '''
-
-        # Parse all frames in the fragment to frames list
-        ndarray_frames = self.get_frames_as_ndarray(fragment_bytes, one_in_frames_ratio)
-
-        # Write frames to disk as JPEG images
-        jpeg_paths = []
-        for i in range(len(ndarray_frames)):
-            frame = ndarray_frames[i]
-            image_file_path = '{}-{}.jpg'.format(jpg_file_base_path, i)
-            iio.imwrite(image_file_path, frame, format=None)
-            jpeg_paths.append(image_file_path)
+        if (not segment_element):
+            raise KeyError('Segment Element required but not found in fragment_doc' )
         
-        return jpeg_paths
+        simple_block_elements = []
+        for element in segment_element:
+            if element.id == 0x1F43B675:
+                for tags in element:
+                    if tags.id == 0xA3:				# Simple Blocks Element ID
+                        simple_block_elements.append(tags)
 
+        track_audio_data = {
+            "track_1": bytearray(),
+            "track_2": bytearray()
+        }
+
+        for simple_block in simple_block_elements:
+            track_number_byte = simple_block.value[0]   # first byte contains track number in VINT encoding
+            new_block = simple_block.value[4:]          # first four bytes are headers so ignore
+
+            if track_number_byte == 0x81:               # 0x81 VINT encoding of decimal 1
+                track_audio_data['track_1'].extend(new_block)
+            elif track_number_byte == 0x82:             # 0x82 VINT encoding of decimal 2
+                track_audio_data['track_2'].extend(new_block)
+
+        return track_audio_data

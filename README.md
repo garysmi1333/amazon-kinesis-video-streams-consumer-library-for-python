@@ -29,7 +29,7 @@ An example of how to consume AWS Connect generated Kinesis Video Streams is incl
 
 1. Setup your Call Flow to enable Live Media Streaming https://docs.aws.amazon.com/connect/latest/adminguide/customer-voice-streams.html
 
-2. Setting up the call flow for Live Media Streaming requires creating a Lambda to forward 
+2. Setting up the call flow for Live Media Streaming requires creating a Lambda to forward call information to that you can use to connect to Kinesis Video Streams
 
 2. Make sure you have an active stream running in KVS. The example takes fragments off the live edge of the stream so if 
 none are being received the consumer will gracefully exit. If you prefer to parse previous stored fragments, you will need to update the 
@@ -54,11 +54,13 @@ python3 -m pip install -r requirements.txt
 ```
 python3 example.py
 ```
-    The example code starts up a simple http server running on port 8000. The server endpoint /stream receives POST requests
-    from the lambda function created when setting up AWS Connect Live Media Streaming
+
+The example code starts up a simple http server running on port 8000. The server endpoint /stream receives POST requests
+from the lambda function created when setting up AWS Connect Live Media Streaming
+
 7. The example simply saves the incoming audio to files, to test, make a call to AWS Connect for a short time. 
 Two files should be created, to_customer.wav an from_customer.wav either or both will contain audio depending on houw you setup
-AWS Connect Live Media Streaming
+AWS Connect Live Media Streaming. Due to file buffering ensure that the call stream has ended to ensure that all audio is saved to disk.
 
 ## Timing and Async Considerations
 

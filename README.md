@@ -11,8 +11,8 @@ Fragments are returned as raw bytes and a searchable DOM like structure by parsi
 In addition, the KvsFragementProcessor class provides the following functions for post-processing of parsed MKV fragments:
 1) get_fragment_tags(): Extract MKV tags from the fragment.
 2) save_fragment_as_local_mkv(): Saves the fragment as stand-alone MKV file on local disk.
-3) get_frames_as_ndarray(): Returns a selectable ratio of frames in the fragment as a list of NDArray objects.
-4) save_frames_as_jpeg(): Returns a selectable ratio of frames in the fragment as a JPEGs to local disk.
+3) get_aws_connect_track_info(): Retrieve the audio track info from the fragment
+4) get_aws_connect_customer_audio(): Returns the actual audio bytes from the fragment
 
 ## Getting started
 
@@ -37,30 +37,15 @@ python3 -m pip install -r requirements.txt
 
 4. Open the cloned repository with your favourite IDE 
 
-5. In kvs_consumer_library_example.py, update the KVS stream parameters:  
+5. In config.ini update your aws credentials:  
     a. REGION and  
     b. KVS_STREAM01_NAME  
 
 6. Run the example code:
 ```
-python3 kvs_consumer_library_example.py
+python3 example.py
 ```
 
-This assumes default client authentication and so your host machine must have a valid AWS credentials file or receive temporary credentials by other means. 
-User IAM or temporary credentials must have AmazonKinesisVideoStreamsReadOnlyAccess or some per stream specific equivalent of these permissions. 
-
-Assuming authenticating is successful then the consumer library will be reading in the nominated KVS stream and returning parsed MKV fragments to the on_fragment_arrived() callback where a series of post-processing of the fragment and enclosed frames is completed.
-
-Check the on_fragment_arrived function and see the post processing features. The save MKV and save frames functions are commented out so you don't fill up too much disk but easy to uncomment to test these features as well.
-
-## Summary Workflow
-
-1) Define a on_fragment_arrived() and on_read_stream_complete() and on_stream_read_exception() call-backs in user application logic.
-2) Initialize the KVS Media and / or Archive Media clients,
-3) Make a call to KVS Media GetMedia and / or KVS Archive Media GetMediaForFragmentList for the given stream,
-4) Initialize and run this KVS Consumer library thread providing the response from the GetMedia
-or GetMediaForFragmentList call,
-5) Fragments will then be parsed and delivered to the call-backs for processing as per the example code provided.
 
 ## Timing and Async Considerations
 
@@ -73,9 +58,6 @@ fragment duration then the stream processing will slip behind the live edge of t
 If performing long or external blocking processes in the on_fragment_arrived() callback, it is the responsibility of the 
 developer to thread or develop async solutions to prevent extended blocking of the consumer library fragment processing. 
 
-## Security
-
-See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
 
 ## License
 

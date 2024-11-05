@@ -21,7 +21,7 @@ import amazon_kinesis_video_consumer_library.ebmlite.util as emblite_utils
 # Init the logger.
 log = logging.getLogger(__name__)
 
-class KvsFragementProcessor():
+class KvsFragmentProcessor():
 
     ####################################################
     # Fragment processing functions

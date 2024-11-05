@@ -27,7 +27,7 @@ aws_secret_access_key=config['aws-connect']['aws_secret_access_key']
 region_name=config['aws-connect']['region_name']
 
 
-kvs_fragment_processor = KvsFragementProcessor()
+kvs_fragment_processor = KvsFragmentProcessor()
 
 kvs_client = boto3.client('kinesisvideo',
                             aws_access_key_id=aws_access_key_id, 
@@ -48,7 +48,7 @@ def on_fragment_arrived(stream_name, fragment_bytes, fragment_dom, fragment_rece
         to_customer_track_number = track_info["AUDIO_TO_CUSTOMER"]['track_number']
     
     # Get the actual audio bytes
-    audio_track_data = kvs_fragment_processor.get_aws_connect_customer_audio(fragment_dom)
+    audio_track_data = kvs_fragment_processor.get_aws_connect_audio(fragment_dom)
 
     # Convert the bytearrays to bytes
     track1_data = bytes(audio_track_data['track_1'])

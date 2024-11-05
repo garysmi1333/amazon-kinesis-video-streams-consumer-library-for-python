@@ -174,7 +174,7 @@ class KvsFragmentProcessor():
 
             return track_information
         
-    def get_aws_connect_customer_audio(self, fragment_dom):
+    def get_aws_connect_audio(self, fragment_dom):
         '''
         Returns the actual audio bytes received for each track
 
